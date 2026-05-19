@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { restaurantOwnerApi } from '../lib/api';
 import { 
   BarChart3, 
   ShoppingBag, 
@@ -24,7 +25,19 @@ export default function RestaurantDashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=1200');
+  const [stats, setStats] = useState({ revenue: '0', active_orders: '0', latency: '14', flight_status: 'ACTIVE' });
+  const [activeOrders, setActiveOrders] = useState<{ id: string; customer: string; items: string; type: string; status: string }[]>([]);
+  const [topSellers, setTopSellers] = useState<{ name: string; count: number; trend: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    restaurantOwnerApi.dashboard().then((data) => {
+      setStats(data.stats);
+      setActiveOrders(data.active_orders);
+      setTopSellers(data.top_sellers);
+      if (data.cover_image) setCoverImage(data.cover_image);
+    }).catch(console.error);
+  }, []);
 
   const [newItem, setNewItem] = useState({
     name: '',
@@ -34,28 +47,35 @@ export default function RestaurantDashboard() {
     image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=400'
   });
 
-  const activeOrders = [
-    { id: '#DX-702', customer: 'Ahmed Al-B.', items: 'Mixed Grill, Salad', type: 'Drone', status: 'Cooking' },
-    { id: '#DX-705', customer: 'Sarah M.', items: 'Hummus, Pita', type: 'Bike', status: 'Ready' },
-    { id: '#DX-710', customer: 'Zaid K.', items: 'Mansaf Platter', type: 'Drone', status: 'Pending' },
-  ];
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCoverImage(reader.result as string);
+        const url = reader.result as string;
+        setCoverImage(url);
+        restaurantOwnerApi.updateProfile({ cover_image: url }).catch(console.error);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const addItemToMenu = (e: React.FormEvent) => {
+  const addItemToMenu = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Adding new item:', newItem);
-    setShowAddMenu(false);
-    // In a real app, this would be an API call
+    try {
+      await restaurantOwnerApi.addMenuItem({
+        name: newItem.name,
+        price: parseFloat(newItem.price),
+        description: newItem.description,
+        category: newItem.category,
+        image: newItem.image,
+      });
+      setShowAddMenu(false);
+      const data = await restaurantOwnerApi.dashboard();
+      setTopSellers(data.top_sellers);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to add item');
+    }
     setNewItem({
       name: '',
       price: '',
@@ -114,10 +134,10 @@ export default function RestaurantDashboard() {
         {/* Quick Stats Grid - Improved Rhythm */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
            {[
-             { label: 'Cycle Revenue', value: '1,420.50', trend: '+12.4%', icon: BarChart3, unit: 'OMR' },
-             { label: 'Active Missions', value: '12', trend: 'Optimal', icon: ShoppingBag, unit: 'UNITS' },
-             { label: 'Response Latency', value: '14', trend: '-2m', icon: Clock, unit: 'MIN' },
-             { label: 'Flight Status', value: 'ACTIVE', trend: 'SAFE', icon: Plane, unit: 'CAA' }
+             { label: 'Cycle Revenue', value: stats.revenue, trend: '+12.4%', icon: BarChart3, unit: 'OMR' },
+             { label: 'Active Missions', value: stats.active_orders, trend: 'Optimal', icon: ShoppingBag, unit: 'UNITS' },
+             { label: 'Response Latency', value: stats.latency, trend: '-2m', icon: Clock, unit: 'MIN' },
+             { label: 'Flight Status', value: stats.flight_status, trend: 'SAFE', icon: Plane, unit: 'CAA' }
            ].map((stat, i) => (
              <div key={i} className="bg-app-card rounded-[20px] p-10 border border-app-border flex flex-col justify-between hover:bg-app-card/80 transition-all group relative overflow-hidden shadow-sm">
                 <div className="absolute -top-12 -right-12 w-40 h-40 bg-primary/5 rounded-full blur-[80px] group-hover:bg-primary/10 transition-all" />
@@ -195,12 +215,7 @@ export default function RestaurantDashboard() {
                     <Flame className="text-primary w-5 h-5" /> Top Sellers
                  </h3>
                  <div className="space-y-6">
-                    {[
-                      { name: 'Mixed Grill', count: 124, trend: '+20%' },
-                      { name: 'Omani Lamb Rice', count: 98, trend: '+5%' },
-                      { name: 'Turkish Salad', count: 86, trend: '+12%' },
-                      { name: 'Hummus Special', count: 54, trend: '-2%' }
-                    ].map((food, i) => (
+                    {topSellers.length ? topSellers.map((food, i) => (
                       <div key={i} className="flex justify-between items-center group">
                          <div className="flex items-center gap-4">
                             <span className="text-app-text/20 font-black italic">{i+1}</span>
@@ -211,7 +226,9 @@ export default function RestaurantDashboard() {
                             <p className={`text-[8px] font-black ${food.trend.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>{food.trend}</p>
                          </div>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="text-app-text/30 text-sm italic">No sales data yet</p>
+                    )}
                  </div>
               </div>
 

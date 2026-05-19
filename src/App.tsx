@@ -6,7 +6,9 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { CartProvider } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
@@ -39,9 +41,9 @@ function AnimatedRoutes() {
         <Route path="/tracking" element={<Tracking />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/profile" element={<UserDashboard />} />
-        <Route path="/restaurant-dashboard" element={<RestaurantDashboard />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/profile" element={<ProtectedRoute roles={['customer']}><UserDashboard /></ProtectedRoute>} />
+        <Route path="/restaurant-dashboard" element={<ProtectedRoute roles={['restaurant_owner']}><RestaurantDashboard /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/register-restaurant" element={<RestaurantRegistration />} />
       </Routes>
     </AnimatePresence>
@@ -51,6 +53,7 @@ function AnimatedRoutes() {
 export default function App() {
   return (
     <ThemeProvider>
+      <AuthProvider>
       <CartProvider>
         <Router>
           <ScrollToTop />
@@ -63,6 +66,7 @@ export default function App() {
           </div>
         </Router>
       </CartProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

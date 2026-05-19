@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { FoodItem } from '../data/restaurants';
+import { FoodItem } from '../lib/api';
 
 interface CartItem extends FoodItem {
   quantity: number;
@@ -7,7 +7,8 @@ interface CartItem extends FoodItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (item: FoodItem) => void;
+  restaurantId: string | null;
+  addToCart: (item: FoodItem, restaurantId: string) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
@@ -21,9 +22,11 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [deliveryType, setDeliveryType] = useState<'Bike' | 'Drone'>('Bike');
 
-  const addToCart = (item: FoodItem) => {
+  const addToCart = (item: FoodItem, restId: string) => {
+    setRestaurantId(restId);
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
@@ -47,14 +50,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }).filter(i => i.quantity > 0));
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    setRestaurantId(null);
+  };
 
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <CartContext.Provider value={{ 
-      cart, addToCart, removeFromCart, updateQuantity, clearCart, 
+      cart, restaurantId, addToCart, removeFromCart, updateQuantity, clearCart, 
       totalPrice, itemCount, deliveryType, setDeliveryType 
     }}>
       {children}

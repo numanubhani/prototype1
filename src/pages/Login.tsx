@@ -2,15 +2,30 @@ import { motion } from 'motion/react';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plane, Mail, Lock, ArrowRight, Github } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/');
+    setError('');
+    setLoading(true);
+    try {
+      const user = await login(email, password);
+      if (user.role === 'admin') navigate('/admin');
+      else if (user.role === 'restaurant_owner') navigate('/restaurant-dashboard');
+      else navigate('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,11 +88,13 @@ export default function Login() {
               </div>
             </div>
 
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
             <button 
               type="submit"
-              className="w-full bg-primary text-white p-6 rounded-[20px] font-black text-xl tracking-tighter flex items-center justify-center gap-3 hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 group"
+              disabled={loading}
+              className="w-full bg-primary text-white p-6 rounded-[20px] font-black text-xl tracking-tighter flex items-center justify-center gap-3 hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 group disabled:opacity-50"
             >
-              SIGN IN
+              {loading ? 'SIGNING IN...' : 'SIGN IN'}
               <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>

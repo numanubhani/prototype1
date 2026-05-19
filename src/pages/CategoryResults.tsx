@@ -1,26 +1,32 @@
 import { motion } from 'motion/react';
 import { useParams, Link } from 'react-router-dom';
-import { RESTAURANTS, FoodItem } from '../data/restaurants';
 import FoodCard from '../components/restaurants/FoodCard';
 import { ArrowLeft, Search } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { restaurantsApi, Restaurant, FoodItem } from '../lib/api';
 
 export default function CategoryResults() {
   const { categoryId } = useParams();
-  
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+
+  useEffect(() => {
+    restaurantsApi.list({ category: categoryId }).then(setRestaurants).catch(console.error);
+  }, [categoryId]);
+
   const results = useMemo(() => {
-    const items: { item: FoodItem, restaurantName: string, restaurantId: string }[] = [];
-    RESTAURANTS.forEach(restaurant => {
-      restaurant.menu.forEach(item => {
-        // Match category name (case insensitive for safety)
-        if (item.category.toLowerCase().includes(categoryId?.toLowerCase() || '') || 
-            restaurant.categories.some(cat => cat.toLowerCase() === categoryId?.toLowerCase())) {
+    const items: { item: FoodItem; restaurantName: string; restaurantId: string }[] = [];
+    restaurants.forEach((restaurant) => {
+      restaurant.menu.forEach((item) => {
+        if (
+          item.category.toLowerCase().includes(categoryId?.toLowerCase() || '') ||
+          restaurant.categories.some((cat) => cat.toLowerCase() === categoryId?.toLowerCase())
+        ) {
           items.push({ item, restaurantName: restaurant.name, restaurantId: restaurant.id });
         }
       });
     });
     return items;
-  }, [categoryId]);
+  }, [categoryId, restaurants]);
 
   return (
     <motion.div
@@ -42,15 +48,6 @@ export default function CategoryResults() {
               </h1>
             </div>
           </div>
-
-          <div className="bg-app-card rounded-[20px] border border-app-border p-4 flex items-center gap-4 w-full md:w-auto">
-             <Search className="w-5 h-5 text-app-text/20" />
-             <input 
-               type="text" 
-               placeholder="Search within category..." 
-               className="bg-transparent border-none outline-none text-app-text font-medium placeholder:text-app-text/10"
-             />
-          </div>
         </div>
 
         {results.length > 0 ? (
@@ -62,22 +59,20 @@ export default function CategoryResults() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <div className="group relative">
-                  <FoodCard item={res.item} />
-                  <div className="mt-2 flex justify-between items-center px-4">
-                    <p className="text-[10px] font-bold text-app-text/30 uppercase tracking-widest">Available at</p>
-                    <Link to={`/restaurant/${res.restaurantId}`} className="text-[10px] font-black text-primary uppercase italic hover:underline">
-                      {res.restaurantName}
-                    </Link>
-                  </div>
+                <FoodCard item={res.item} restaurantId={res.restaurantId} />
+                <div className="mt-2 flex justify-between items-center px-4">
+                  <p className="text-[10px] font-bold text-app-text/30 uppercase tracking-widest">Available at</p>
+                  <Link to={`/restaurant/${res.restaurantId}`} className="text-[10px] font-black text-primary uppercase italic hover:underline">
+                    {res.restaurantName}
+                  </Link>
                 </div>
               </motion.div>
             ))}
           </div>
         ) : (
           <div className="text-center py-32 bg-app-card rounded-[20px] border border-dashed border-app-border">
-             <h2 className="text-2xl font-display font-black text-app-text/20 uppercase italic">No items found in this sector.</h2>
-             <Link to="/" className="mt-6 inline-block text-primary font-bold hover:underline">Back to Hangar</Link>
+            <h2 className="text-2xl font-display font-black text-app-text/20 uppercase italic">No items found in this sector.</h2>
+            <Link to="/" className="mt-6 inline-block text-primary font-bold hover:underline">Back to Hangar</Link>
           </div>
         )}
       </div>

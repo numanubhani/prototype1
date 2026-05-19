@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { userApi } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { 
   ShoppingBag, 
   Clock, 
@@ -16,11 +18,28 @@ import {
 import { Link } from 'react-router-dom';
 
 export default function UserDashboard() {
-  const previousOrders = [
-    { id: 'DX-1092', restaurant: 'Turkish House', status: 'Delivered', date: 'Oct 24, 2023', total: '12.500', items: 3 },
-    { id: 'DX-1088', restaurant: 'Muscat Fusion', status: 'Delivered', date: 'Oct 20, 2023', total: '8.400', items: 2 },
-    { id: 'DX-1075', restaurant: 'Al Mouj Cafe', status: 'Delivered', date: 'Oct 15, 2023', total: '4.200', items: 1 },
-  ];
+  const { logout } = useAuth();
+  const [profile, setProfile] = useState<{
+    user: { name: string; tier: string };
+    stats: { completed_orders: number };
+    active_orders: { id: string; restaurant_name: string }[];
+    order_history: { id: string; restaurant_name: string; total: string; created_at: string; items: { quantity: number }[] }[];
+    wallet_balance: string;
+    addresses: { label: string; line: string; city: string; node: string }[];
+  } | null>(null);
+
+  useEffect(() => {
+    userApi.profile().then(setProfile).catch(console.error);
+  }, []);
+
+  const previousOrders = (profile?.order_history || []).map((o) => ({
+    id: o.id,
+    restaurant: o.restaurant_name,
+    status: 'Delivered',
+    date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    total: o.total,
+    items: o.items?.length || 1,
+  }));
 
   return (
     <motion.div
@@ -50,11 +69,13 @@ export default function UserDashboard() {
                  <div className="h-4 w-px bg-app-text/10" />
                  <span className="text-app-text/30 text-[9px] font-mono font-black uppercase tracking-[0.2em]">Oman_ID_Ref_8021_DX</span>
               </div>
-              <h1 className="text-5xl md:text-[5.5rem] font-display font-black text-app-text italic tracking-tighter uppercase mb-6 leading-[0.85]">Ahmed <br className="hidden md:block" /> <span className="text-primary translate-x-4 block md:inline">Al-Balushi</span></h1>
+              <h1 className="text-5xl md:text-[5.5rem] font-display font-black text-app-text italic tracking-tighter uppercase mb-6 leading-[0.85]">
+                {profile?.user?.name || 'Loading...'}
+              </h1>
               <div className="flex flex-wrap gap-4">
                 <div className="flex items-center gap-3 px-5 py-3 bg-app-bg border border-app-border rounded-[20px]">
                    <ShoppingBag className="w-4 h-4 text-primary" /> 
-                   <span className="text-[10px] font-mono font-black uppercase tracking-widest">12 Completed Cycles</span>
+                   <span className="text-[10px] font-mono font-black uppercase tracking-widest">{profile?.stats.completed_orders ?? 0} Completed Cycles</span>
                 </div>
                 <div className="flex items-center gap-3 px-5 py-3 bg-app-bg border border-app-border rounded-[20px] text-primary">
                    <Star className="w-4 h-4 fill-primary" /> 
@@ -68,7 +89,7 @@ export default function UserDashboard() {
             <button className="flex-1 md:flex-none p-6 bg-app-bg rounded-[20px] border border-app-border hover:border-primary/50 transition-all text-app-text group/btn flex items-center justify-center">
               <Settings className="w-8 h-8 group-hover/btn:rotate-90 transition-transform" />
             </button>
-            <button className="flex-1 md:flex-none px-12 py-6 bg-app-bg rounded-[20px] border border-app-border hover:bg-red-500 hover:text-white hover:border-red-500 transition-all text-app-text font-mono font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 italic">
+            <button onClick={logout} className="flex-1 md:flex-none px-12 py-6 bg-app-bg rounded-[20px] border border-app-border hover:bg-red-500 hover:text-white hover:border-red-500 transition-all text-app-text font-mono font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 italic">
               <LogOut className="w-4 h-4" /> Log_Out
             </button>
           </div>
@@ -93,10 +114,14 @@ export default function UserDashboard() {
                        <Plane className="w-10 h-10" />
                     </div>
                     <div>
-                       <h4 className="text-2xl font-display font-black text-app-text italic tracking-tight mb-2">Turkish House Delivery</h4>
+                       <h4 className="text-2xl font-display font-black text-app-text italic tracking-tight mb-2">
+                         {profile?.active_orders[0]?.restaurant_name || 'No active orders'}
+                       </h4>
                        <div className="flex items-center gap-3">
                           <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                          <p className="text-app-text/40 text-[10px] font-mono font-black uppercase tracking-widest italic">Vector_DX-702 // Status_Airborne</p>
+                          <p className="text-app-text/40 text-[10px] font-mono font-black uppercase tracking-widest italic">
+                            Vector_{profile?.active_orders[0]?.id || '—'} // Status_Airborne
+                          </p>
                        </div>
                     </div>
                  </div>
@@ -154,7 +179,7 @@ export default function UserDashboard() {
                     <div className="w-1 h-1 rounded-full bg-app-text/10" />
                  </div>
                  <p className="text-app-text/30 text-[9px] font-mono font-black uppercase tracking-[0.2em] mb-4">Secured_Drone_Credits</p>
-                 <h2 className="text-5xl font-display font-black text-app-text italic tracking-tighter mb-10 overflow-hidden text-ellipsis whitespace-nowrap">42.500 <span className="text-primary">OMR</span></h2>
+                 <h2 className="text-5xl font-display font-black text-app-text italic tracking-tighter mb-10 overflow-hidden text-ellipsis whitespace-nowrap">{profile?.wallet_balance ?? '—'} <span className="text-primary">OMR</span></h2>
                  <div className="flex justify-between items-center pt-8 border-t border-app-border">
                     <p className="text-app-text/20 text-[9px] font-mono font-bold italic uppercase tracking-widest leading-none">AUTH_REF // **** 8021</p>
                     <CreditCard className="text-app-text/20 w-8 h-8" />

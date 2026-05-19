@@ -1,33 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { adminApi } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { 
   Users, 
   Building2, 
   ShieldAlert, 
   Ban, 
   Power, 
-  BarChart3, 
   Search, 
-  MoreVertical,
   Activity,
   AlertTriangle,
-  LayoutDashboard
+  LayoutDashboard,
+  LogOut,
+  UserCheck,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'users' | 'restaurants'>('users');
+  const [users, setUsers] = useState<{ id: number; name: string; email: string; orders: number; status: string; joined: string }[]>([]);
+  const [restaurants, setRestaurants] = useState<{ id: string; name: string; owner: string; status: string; revenue: string; rating: number }[]>([]);
+  const [actionError, setActionError] = useState('');
 
-  const users = [
-    { id: 'U-001', name: 'Ahmed Al-B.', email: 'ahmed@example.com', orders: 12, status: 'Active', joined: 'Oct 2023' },
-    { id: 'U-002', name: 'Sarah M.', email: 'sarah@example.com', orders: 4, status: 'Active', joined: 'Oct 2023' },
-    { id: 'U-003', name: 'Hamad R.', email: 'hamad@example.com', orders: 0, status: 'Banned', joined: 'Sept 2023' },
-  ];
+  const loadData = async () => {
+    const [usersData, restaurantsData] = await Promise.all([
+      adminApi.users(),
+      adminApi.restaurants(),
+    ]);
+    setUsers(usersData);
+    setRestaurants(restaurantsData);
+  };
 
-  const restaurants = [
-    { id: 'R-001', name: 'Turkish House', owner: 'Said Al-M.', status: 'Open', revenue: '1,420.50', rating: 4.8 },
-    { id: 'R-002', name: 'Al Mouj Cafe', owner: 'Muna S.', status: 'Closed', revenue: '890.20', rating: 4.5 },
-    { id: 'R-003', name: 'Sultan Burger', owner: 'Zaid K.', status: 'Open', revenue: '2,100.00', rating: 4.2 },
-  ];
+  useEffect(() => {
+    loadData().catch((err) => console.error(err));
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleUserAction = async (userId: number, status: string) => {
+    setActionError('');
+    try {
+      if (status === 'Banned') {
+        await adminApi.unbanUser(userId);
+      } else {
+        await adminApi.banUser(userId);
+      }
+      await loadData();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Action failed');
+    }
+  };
 
   return (
     <motion.div
@@ -52,21 +80,35 @@ export default function AdminDashboard() {
              <h1 className="text-5xl md:text-7xl font-display font-black text-app-text italic uppercase tracking-tighter leading-[0.85]">Fleet <br /> <span className="text-primary italic">Controller_v9</span></h1>
           </div>
 
-          <div className="flex bg-app-card p-1.5 rounded-[20px] border border-app-border shadow-xl">
-             <button 
-               onClick={() => setActiveTab('users')}
-               className={`px-10 py-4 rounded-[20px] font-display font-black uppercase tracking-tighter text-sm transition-all flex items-center gap-3 italic ${activeTab === 'users' ? 'bg-primary text-white shadow-lg shadow-primary/20 shadow-primary/20' : 'text-app-text/40 hover:text-app-text'}`}
-             >
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <div className="flex bg-app-card p-1.5 rounded-[20px] border border-app-border shadow-xl">
+              <button 
+                onClick={() => setActiveTab('users')}
+                className={`px-10 py-4 rounded-[20px] font-display font-black uppercase tracking-tighter text-sm transition-all flex items-center gap-3 italic ${activeTab === 'users' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-app-text/40 hover:text-app-text'}`}
+              >
                 <Users className="w-4 h-4" /> Users
-             </button>
-             <button 
-               onClick={() => setActiveTab('restaurants')}
-               className={`px-10 py-4 rounded-[20px] font-display font-black uppercase tracking-tighter text-sm transition-all flex items-center gap-3 italic ${activeTab === 'restaurants' ? 'bg-primary text-white shadow-lg shadow-primary/20 shadow-primary/20' : 'text-app-text/40 hover:text-app-text'}`}
-             >
+              </button>
+              <button 
+                onClick={() => setActiveTab('restaurants')}
+                className={`px-10 py-4 rounded-[20px] font-display font-black uppercase tracking-tighter text-sm transition-all flex items-center gap-3 italic ${activeTab === 'restaurants' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-app-text/40 hover:text-app-text'}`}
+              >
                 <Building2 className="w-4 h-4" /> Partners
-             </button>
+              </button>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center justify-center gap-3 px-8 py-4 bg-app-card border border-app-border rounded-[20px] text-app-text hover:bg-red-500 hover:text-white hover:border-red-500 transition-all font-display font-black uppercase tracking-tighter text-sm italic"
+            >
+              <LogOut className="w-4 h-4" /> Log Out
+            </button>
           </div>
         </div>
+
+        {actionError && (
+          <div className="mb-8 p-4 bg-red-500/10 border border-red-500/30 rounded-[20px] text-red-500 text-sm text-center">
+            {actionError}
+          </div>
+        )}
 
         {/* Global Analytics - Technical Redesign */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
@@ -151,11 +193,26 @@ export default function AdminDashboard() {
                           <td className="px-10 py-8 text-right">
                              <div className="flex justify-end gap-3 opacity-30 group-hover:opacity-100 transition-all">
                                 {activeTab === 'users' ? (
-                                   <button className="flex items-center gap-3 px-8 py-4 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-[20px] transition-all text-[10px] font-black uppercase italic tracking-widest font-display">
-                                      <Ban className="w-4 h-4" /> SEVER LINK
-                                   </button>
+                                   item.status === 'Banned' ? (
+                                     <button
+                                       onClick={() => handleUserAction(item.id, item.status)}
+                                       className="flex items-center gap-3 px-8 py-4 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white border border-green-500/20 rounded-[20px] transition-all text-[10px] font-black uppercase italic tracking-widest font-display"
+                                     >
+                                       <UserCheck className="w-4 h-4" /> RESTORE LINK
+                                     </button>
+                                   ) : (
+                                     <button
+                                       onClick={() => handleUserAction(item.id, item.status)}
+                                       className="flex items-center gap-3 px-8 py-4 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-[20px] transition-all text-[10px] font-black uppercase italic tracking-widest font-display"
+                                     >
+                                       <Ban className="w-4 h-4" /> SEVER LINK
+                                     </button>
+                                   )
                                 ) : (
-                                   <button className="flex items-center gap-3 px-8 py-4 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white border border-orange-500/20 rounded-[20px] transition-all text-[10px] font-black uppercase italic tracking-widest font-display">
+                                   <button
+                                     onClick={() => adminApi.lockdownRestaurant(item.id).then(loadData)}
+                                     className="flex items-center gap-3 px-8 py-4 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white border border-orange-500/20 rounded-[20px] transition-all text-[10px] font-black uppercase italic tracking-widest font-display"
+                                   >
                                       <Power className="w-4 h-4" /> LOCKDOWN
                                    </button>
                                 )}

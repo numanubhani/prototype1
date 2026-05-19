@@ -1,16 +1,21 @@
 import { motion } from 'motion/react';
-import { RESTAURANTS } from '../data/restaurants';
 import RestaurantCard from '../components/restaurants/RestaurantCard';
 import { Search, MapPin, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { restaurantsApi, Restaurant } from '../lib/api';
 
 export default function Restaurants() {
   const [search, setSearch] = useState('');
-  
-  const filtered = RESTAURANTS.filter(r => 
-    r.name.toLowerCase().includes(search.toLowerCase()) || 
-    r.categories.some(c => c.toLowerCase().includes(search.toLowerCase()))
-  );
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    restaurantsApi
+      .list({ search: search || undefined })
+      .then(setRestaurants)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [search]);
 
   return (
     <motion.div
@@ -25,12 +30,11 @@ export default function Restaurants() {
           <p className="text-app-text/40 text-lg font-light">Order from the best restaurants in Oman with futuristic delivery.</p>
         </header>
 
-        {/* Filters and Search */}
         <div className="flex flex-col md:flex-row gap-4 mb-16">
           <div className="flex-1 relative">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-app-text/20 w-5 h-5" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search for restaurants or cuisines..."
               className="w-full bg-app-card border border-app-border rounded-[20px] py-5 pl-14 pr-6 focus:outline-none focus:border-primary/50 transition-all shadow-sm text-app-text placeholder:text-app-text/20"
               value={search}
@@ -47,16 +51,13 @@ export default function Restaurants() {
           </div>
         </div>
 
-        {/* Restaurant Grid */}
-        {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {filtered.map((r, i) => (
-              <RestaurantCard key={r.id} restaurant={r} index={i} />
-            ))}
-          </div>
+        {loading ? (
+          <p className="text-center text-app-text/40 font-mono text-xs uppercase tracking-widest">Loading restaurants...</p>
         ) : (
-          <div className="text-center py-32 bg-app-card rounded-[20px] border border-app-border">
-            <p className="text-2xl font-display font-black text-app-text/20 uppercase tracking-widest">No restaurants found</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {restaurants.map((restaurant) => (
+              <RestaurantCard key={restaurant.id} restaurant={restaurant} index={0} />
+            ))}
           </div>
         )}
       </div>

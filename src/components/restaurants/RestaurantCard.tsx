@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Star, Clock, Bike, Plane } from 'lucide-react';
-import { Restaurant } from '../../data/restaurants';
+import { Restaurant } from '../../lib/api';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
-  index: number;
+  index?: number;
   key?: string | number;
 }
 
-export default function RestaurantCard({ restaurant, index }: RestaurantCardProps) {
+export default function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

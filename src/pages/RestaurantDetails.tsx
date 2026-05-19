@@ -1,144 +1,95 @@
 import { motion } from 'motion/react';
 import { useParams, Link } from 'react-router-dom';
-import { RESTAURANTS } from '../data/restaurants';
-import { Star, Clock, Bike, Plane, ArrowLeft, ShoppingCart, Info, Search } from 'lucide-react';
-import { useState } from 'react';
+import { Star, Clock, Bike, Plane, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import FoodCard from '../components/restaurants/FoodCard';
 import { useCart } from '../context/CartContext';
+import { restaurantsApi, Restaurant } from '../lib/api';
 
 export default function RestaurantDetails() {
   const { id } = useParams();
-  const restaurant = RESTAURANTS.find(r => r.id === id);
-  const { itemCount, totalPrice } = useCart();
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
+  const { itemCount, totalPrice } = useCart();
 
-  if (!restaurant) return <div>Restaurant not found</div>;
+  useEffect(() => {
+    if (!id) return;
+    restaurantsApi
+      .get(id)
+      .then(setRestaurant)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [id]);
 
-  const menuCategories = ['All', ...new Set(restaurant.menu.map(item => item.category))];
-  const filteredMenu = activeTab === 'All' 
-    ? restaurant.menu 
-    : restaurant.menu.filter(item => item.category === activeTab);
+  if (loading) return <motion.div className="pt-32 text-center text-app-text/40">Loading...</motion.div>;
+  if (!restaurant) return <div className="pt-32 text-center">Restaurant not found</div>;
+
+  const menuCategories = ['All', ...new Set(restaurant.menu.map((item) => item.category))];
+  const filteredMenu =
+    activeTab === 'All' ? restaurant.menu : restaurant.menu.filter((item) => item.category === activeTab);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      {/* Hero Section */}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="relative h-[400px] md:h-[500px]">
-        <img 
-          src={restaurant.image} 
-          alt={restaurant.name} 
-          className="w-full h-full object-cover"
-        />
+        <img src={restaurant.image} alt={restaurant.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-app-bg/90 via-app-bg/40 to-transparent" />
-        
         <div className="absolute top-8 left-8">
-           <Link to="/restaurants" className="flex items-center gap-2 bg-black/40 backdrop-blur-xl text-white px-5 py-2.5 rounded-full hover:bg-white hover:text-black transition-all border border-white/10">
-             <ArrowLeft className="w-5 h-5" />
-             BACK
-           </Link>
-        </div>
-
-        <div className="absolute bottom-12 left-0 right-0 px-6">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                {restaurant.categories.map(cat => (
-                  <span key={cat} className="bg-primary px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider">{cat}</span>
-                ))}
-              </div>
-              <h1 className="text-5xl md:text-7xl font-display font-black text-app-text tracking-tighter uppercase italic">{restaurant.name}</h1>
-              <div className="flex flex-wrap items-center gap-6 text-app-text/80 font-medium">
-                <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 fill-primary text-primary" />
-                  <span className="text-app-text font-bold">{restaurant.rating}</span>
-                  <span>(200+ reviews)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" />
-                  <span>{restaurant.deliveryTime}</span>
-                </div>
-                <button className="flex items-center gap-2 underline underline-offset-4 decoration-primary">
-                  <Info className="w-5 h-5" />
-                  Info & Safety
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-               {restaurant.deliveryType === 'Drone' || restaurant.deliveryType === 'Both' ? (
-                 <div className="bg-primary text-white p-4 rounded-[20px] flex flex-col items-center gap-2 shadow-xl">
-                   <Plane className="w-8 h-8" />
-                   <span className="text-[10px] font-black uppercase">Drone Ready</span>
-                 </div>
-               ) : null}
-            </div>
-          </div>
+          <Link to="/restaurants" className="flex items-center gap-2 bg-black/40 backdrop-blur-xl text-white px-5 py-2.5 rounded-full hover:bg-white hover:text-black transition-all border border-white/10">
+            <ArrowLeft className="w-5 h-5" />
+            BACK
+          </Link>
         </div>
       </div>
 
-      {/* Menu Navigation */}
-      <div className="sticky top-[72px] z-30 glass border-b border-app-border px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto scrollbar-hide gap-12 text-app-text">
-          <div className="flex items-center gap-8 whitespace-nowrap">
-             {menuCategories.map(cat => (
-               <button 
-                 key={cat}
-                 onClick={() => setActiveTab(cat)}
-                 className={`text-lg font-bold pb-1 transition-all relative ${activeTab === cat ? 'text-primary' : 'text-app-text/40 hover:text-app-text'}`}
-               >
-                 {cat}
-                 {activeTab === cat && <motion.div layoutId="activeCat" className="absolute -bottom-1 left-0 right-0 h-1 bg-primary rounded-full shadow-[0_0_10px_rgba(249,115,22,0.5)]" />}
-               </button>
-             ))}
-          </div>
-          
-          <div className="bg-app-card border border-app-border rounded-full px-4 py-2 flex items-center gap-2 min-w-[200px]">
-            <Search className="w-4 h-4 text-app-text/20" />
-            <input type="text" placeholder="Search menu..." className="bg-transparent text-sm w-full outline-none text-app-text placeholder:text-app-text/20" />
+      <div className="max-w-7xl mx-auto px-6 -mt-20 relative z-10 pb-20">
+        <div className="bg-app-card rounded-[20px] border border-app-border p-8 md:p-12 mb-12 shadow-2xl">
+          <div className="flex flex-col md:flex-row justify-between gap-8">
+            <div>
+              <h1 className="text-4xl md:text-6xl font-display font-black text-app-text uppercase italic tracking-tighter mb-4">{restaurant.name}</h1>
+              <p className="text-app-text/50 mb-6 max-w-xl">{restaurant.description}</p>
+              <div className="flex flex-wrap gap-4">
+                <span className="flex items-center gap-2 bg-app-bg px-4 py-2 rounded-full border border-app-border text-sm font-bold">
+                  <Star className="w-4 h-4 text-primary fill-primary" /> {restaurant.rating}
+                </span>
+                <span className="flex items-center gap-2 bg-app-bg px-4 py-2 rounded-full border border-app-border text-sm font-bold">
+                  <Clock className="w-4 h-4 text-primary" /> {restaurant.deliveryTime}
+                </span>
+                <span className="flex items-center gap-2 bg-app-bg px-4 py-2 rounded-full border border-app-border text-sm font-bold">
+                  {restaurant.deliveryType === 'Drone' ? <Plane className="w-4 h-4 text-primary" /> : <Bike className="w-4 h-4 text-primary" />}
+                  {restaurant.deliveryType}
+                </span>
+              </div>
+            </div>
+            {itemCount > 0 && (
+              <Link to="/cart" className="self-start flex items-center gap-3 bg-primary text-white px-8 py-5 rounded-[20px] font-black shadow-xl shadow-primary/20">
+                <ShoppingCart className="w-6 h-6" />
+                {itemCount} items · {totalPrice.toFixed(3)} OMR
+              </Link>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Menu Content */}
-      <div className="py-20 px-6 bg-app-bg">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="flex gap-3 overflow-x-auto pb-6 mb-8">
+          {menuCategories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveTab(cat)}
+              className={`px-6 py-3 rounded-full font-bold text-sm whitespace-nowrap transition-all ${
+                activeTab === cat ? 'bg-primary text-white' : 'bg-app-card border border-app-border text-app-text/50'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredMenu.map((item) => (
-            <FoodCard key={item.id} item={item} />
+            <FoodCard key={item.id} item={item} restaurantId={restaurant.id} />
           ))}
         </div>
       </div>
-
-      {/* Final Animated Sticky CTA for Mobile/Desktop */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-6">
-        <Link to="/cart">
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full bg-primary text-white rounded-[20px] p-4 shadow-2xl flex items-center justify-between group overflow-hidden relative shadow-primary/20"
-          >
-            <div className="absolute inset-0 bg-primary-dark translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-            
-            <div className="relative z-10 flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-[20px] group-hover:bg-white/10 transition-colors">
-                <ShoppingCart className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <p className="text-[9px] font-black uppercase opacity-70 tracking-widest leading-none mb-1">GO TO CART</p>
-                <p className="text-lg font-display font-black tracking-tighter leading-none">{itemCount} ITEMS</p>
-              </div>
-            </div>
-
-            <div className="relative z-10 text-right">
-              <p className="text-[9px] font-black uppercase opacity-70 tracking-widest leading-none mb-1">TOTAL</p>
-              <p className="text-xl font-display font-black leading-none">{totalPrice.toFixed(3)} OMR</p>
-            </div>
-          </motion.button>
-        </Link>
-      </div>
-
     </motion.div>
   );
 }

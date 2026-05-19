@@ -2,12 +2,17 @@ import { motion } from 'motion/react';
 import HeroSection from '../components/home/HeroSection';
 import RestaurantCard from '../components/restaurants/RestaurantCard';
 import FoodCard from '../components/restaurants/FoodCard';
-import { RESTAURANTS } from '../data/restaurants';
 import { Bike, Plane, ShoppingBag, Utensils, Zap, Star, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { restaurantsApi, Restaurant } from '../lib/api';
 
 export default function Home() {
-  const featuredRestaurants = RESTAURANTS.slice(0, 3);
+  const [featuredRestaurants, setFeaturedRestaurants] = useState<Restaurant[]>([]);
+
+  useEffect(() => {
+    restaurantsApi.list().then((data) => setFeaturedRestaurants(data.slice(0, 3))).catch(console.error);
+  }, []);
   
   const categories = [
     { name: 'Omani', icon: '🇴🇲', count: 12 },
@@ -95,8 +100,10 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {RESTAURANTS.flatMap(r => r.menu.slice(0, 1)).slice(0, 4).map((item, i) => (
-              <FoodCard key={item.id} item={item} />
+            {featuredRestaurants.flatMap((r) =>
+              r.menu.slice(0, 1).map((item) => ({ item, restaurantId: r.id }))
+            ).slice(0, 4).map(({ item, restaurantId }) => (
+              <FoodCard key={item.id} item={item} restaurantId={restaurantId} />
             ))}
           </div>
         </div>

@@ -2,16 +2,29 @@ import { motion } from 'motion/react';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plane, Mail, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/');
+    setError('');
+    setLoading(true);
+    try {
+      await register(name, email, password);
+      navigate('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,11 +106,13 @@ export default function Signup() {
               </p>
             </div>
 
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
             <button 
               type="submit"
-              className="w-full bg-primary text-white p-6 rounded-[20px] font-black text-xl tracking-tighter flex items-center justify-center gap-3 hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 group"
+              disabled={loading}
+              className="w-full bg-primary text-white p-6 rounded-[20px] font-black text-xl tracking-tighter flex items-center justify-center gap-3 hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 group disabled:opacity-50"
             >
-              CREATE ACCOUNT
+              {loading ? 'CREATING...' : 'CREATE ACCOUNT'}
               <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>

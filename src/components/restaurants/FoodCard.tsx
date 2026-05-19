@@ -1,15 +1,16 @@
 import { motion } from 'motion/react';
 import { useCart } from '../../context/CartContext';
-import { FoodItem } from '../../data/restaurants';
+import { FoodItem } from '../../lib/api';
 import { Plus, Minus, Info } from 'lucide-react';
 import { useState } from 'react';
 
 interface FoodCardProps {
   item: FoodItem;
+  restaurantId: string;
   key?: string | number;
 }
 
-export default function FoodCard({ item }: FoodCardProps) {
+export default function FoodCard({ item, restaurantId }: FoodCardProps) {
   const { addToCart, cart, updateQuantity } = useCart();
   const cartItem = cart.find(i => i.id === item.id);
   const quantity = cartItem?.quantity || 0;
@@ -51,7 +52,7 @@ export default function FoodCard({ item }: FoodCardProps) {
           <div className="relative">
             {quantity === 0 ? (
               <button 
-                onClick={() => addToCart(item)}
+                onClick={() => addToCart(item, restaurantId)}
                 className="bg-app-bg hover:bg-primary border border-app-border hover:border-primary text-app-text hover:text-white p-4 rounded-[20px] transition-all shadow-xl group/btn"
               >
                 <Plus className="w-5 h-5 relative z-10" />
