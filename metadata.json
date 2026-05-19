@@ -1,0 +1,6 @@
+{
+  "name": "DroneExpress",
+  "description": "Modern drone-led food delivery platform prototype for Oman.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
