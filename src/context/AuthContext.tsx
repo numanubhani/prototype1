@@ -45,9 +45,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         saveUser(u);
         setUser(u);
       })
-      .catch(() => {
-        clearTokens();
-        setUser(null);
+      .catch((err) => {
+        // Only clear session on auth failure, not network/CORS errors.
+        const message = err instanceof Error ? err.message : '';
+        if (message.includes('sign in') || message.includes('401')) {
+          clearTokens();
+          setUser(null);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
